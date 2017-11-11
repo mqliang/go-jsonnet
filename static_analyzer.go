@@ -40,8 +40,9 @@ func analyzeVisit(a ast.Node, inObject bool, vars ast.IdentifierSet) error {
 	s := &analysisState{freeVars: ast.NewIdentifierSet()}
 
 	// TODO(sbarzowski) Test somehow that we're visiting all the nodes
-	switch a := a.(type) {
-	case *ast.Apply:
+	switch a.Type() {
+	case ast.AST_APPLY:
+		a := a.(*ast.Apply)
 		visitNext(a.Target, inObject, vars, s)
 		for _, arg := range a.Arguments.Positional {
 			visitNext(arg, inObject, vars, s)
@@ -49,20 +50,25 @@ func analyzeVisit(a ast.Node, inObject bool, vars ast.IdentifierSet) error {
 		for _, arg := range a.Arguments.Named {
 			visitNext(arg.Arg, inObject, vars, s)
 		}
-	case *ast.Array:
+	case ast.AST_ARRAY:
+		a := a.(*ast.Array)
 		for _, elem := range a.Elements {
 			visitNext(elem, inObject, vars, s)
 		}
-	case *ast.Binary:
+	case ast.AST_BINARY:
+		a := a.(*ast.Binary)
 		visitNext(a.Left, inObject, vars, s)
 		visitNext(a.Right, inObject, vars, s)
-	case *ast.Conditional:
+	case ast.AST_CONDITIONAL:
+		a := a.(*ast.Conditional)
 		visitNext(a.Cond, inObject, vars, s)
 		visitNext(a.BranchTrue, inObject, vars, s)
 		visitNext(a.BranchFalse, inObject, vars, s)
-	case *ast.Error:
+	case ast.AST_ERROR:
+		a := a.(*ast.Error)
 		visitNext(a.Expr, inObject, vars, s)
-	case *ast.Function:
+	case ast.AST_FUNCTION:
+		a := a.(*ast.Function)
 		newVars := vars.Clone()
 		for _, param := range a.Parameters.Required {
 			newVars.Add(param)
@@ -81,24 +87,28 @@ func analyzeVisit(a ast.Node, inObject bool, vars ast.IdentifierSet) error {
 		for _, param := range a.Parameters.Optional {
 			s.freeVars.Remove(param.Name)
 		}
-	case *ast.Import:
+	case ast.AST_IMPORT:
 		//nothing to do here
-	case *ast.ImportStr:
+	case ast.AST_IMPORTSTR:
 		//nothing to do here
-	case *ast.InSuper:
+	case ast.AST_IN_SUPER:
+		a := a.(*ast.InSuper)
 		if !inObject {
 			return parser.MakeStaticError("Can't use super outside of an object.", *a.Loc())
 		}
 		visitNext(a.Index, inObject, vars, s)
-	case *ast.SuperIndex:
+	case ast.AST_SUPER_INDEX:
+		a := a.(*ast.SuperIndex)
 		if !inObject {
 			return parser.MakeStaticError("Can't use super outside of an object.", *a.Loc())
 		}
 		visitNext(a.Index, inObject, vars, s)
-	case *ast.Index:
+	case ast.AST_INDEX:
+		a := a.(*ast.Index)
 		visitNext(a.Target, inObject, vars, s)
 		visitNext(a.Index, inObject, vars, s)
-	case *ast.Local:
+	case ast.AST_LOCAL:
+		a := a.(*ast.Local)
 		newVars := vars.Clone()
 		for _, bind := range a.Binds {
 			newVars.Add(bind.Variable)
@@ -114,15 +124,16 @@ func analyzeVisit(a ast.Node, inObject bool, vars ast.IdentifierSet) error {
 		for _, bind := range a.Binds {
 			s.freeVars.Remove(bind.Variable)
 		}
-	case *ast.LiteralBoolean:
+	case ast.AST_LITERAL_BOOLEAN:
 		//nothing to do here
-	case *ast.LiteralNull:
+	case ast.AST_LITERAL_NULL:
 		//nothing to do here
-	case *ast.LiteralNumber:
+	case ast.AST_LITERAL_NUMBER:
 		//nothing to do here
-	case *ast.LiteralString:
+	case ast.AST_LITERAL_STRING:
 		//nothing to do here
-	case *ast.DesugaredObject:
+	case ast.AST_DESUGARED_OBJECT:
+		a := a.(*ast.DesugaredObject)
 		for _, field := range a.Fields {
 			// Field names are calculated *outside* of the object
 			visitNext(field.Name, inObject, vars, s)
@@ -131,13 +142,16 @@ func analyzeVisit(a ast.Node, inObject bool, vars ast.IdentifierSet) error {
 		for _, assert := range a.Asserts {
 			visitNext(assert, true, vars, s)
 		}
-	case *ast.Self:
+	case ast.AST_SELF:
+		a := a.(*ast.Self)
 		if !inObject {
 			return parser.MakeStaticError("Can't use self outside of an object.", *a.Loc())
 		}
-	case *ast.Unary:
+	case ast.AST_UNARY:
+		a := a.(*ast.Unary)
 		visitNext(a.Expr, inObject, vars, s)
-	case *ast.Var:
+	case ast.AST_VAR:
+		a := a.(*ast.Var)
 		if !vars.Contains(a.Id) {
 			return parser.MakeStaticError(fmt.Sprintf("Unknown variable: %v", a.Id), *a.Loc())
 		}

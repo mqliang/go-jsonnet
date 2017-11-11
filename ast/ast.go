@@ -28,6 +28,38 @@ type Identifiers []Identifier
 // TODO(jbeda) implement interning of identifiers if necessary.  The C++
 // version does so.
 
+type ASTType string
+
+const (
+	AST_APPLY                       ASTType = "AST_APPLY"
+	AST_APPLY_BRACE                 ASTType = "AST_APPLY_BRACE"
+	AST_ARRAY                       ASTType = "AST_ARRAY"
+	AST_ARRAY_COMPREHENSION         ASTType = "AST_ARRAY_COMPREHENSION"
+	AST_ASSERT                      ASTType = "AST_ASSERT"
+	AST_BINARY                      ASTType = "AST_BINARY"
+	AST_CONDITIONAL                 ASTType = "AST_CONDITIONAL"
+	AST_DESUGARED_OBJECT            ASTType = "AST_DESUGARED_OBJECT"
+	AST_DOLLAR                      ASTType = "AST_DOLLAR"
+	AST_ERROR                       ASTType = "AST_ERROR"
+	AST_FUNCTION                    ASTType = "AST_FUNCTION"
+	AST_IMPORT                      ASTType = "AST_IMPORT"
+	AST_IMPORTSTR                   ASTType = "AST_IMPORTSTR"
+	AST_INDEX                       ASTType = "AST_INDEX"
+	AST_SLICE                       ASTType = "AST_SLICE"
+	AST_IN_SUPER                    ASTType = "AST_IN_SUPER"
+	AST_LITERAL_BOOLEAN             ASTType = "AST_LITERAL_BOOLEAN"
+	AST_LITERAL_NULL                ASTType = "AST_LITERAL_NULL"
+	AST_LITERAL_NUMBER              ASTType = "AST_LITERAL_NUMBER"
+	AST_LITERAL_STRING              ASTType = "AST_LITERAL_STRING"
+	AST_LOCAL                       ASTType = "AST_LOCAL"
+	AST_OBJECT                      ASTType = "AST_OBJECT"
+	AST_OBJECT_COMPREHENSION        ASTType = "AST_OBJECT_COMPREHENSION"
+	AST_SELF                        ASTType = "AST_SELF"
+	AST_SUPER_INDEX                 ASTType = "AST_SUPER_INDEX"
+	AST_UNARY                       ASTType = "AST_UNARY"
+	AST_VAR                         ASTType = "AST_VAR"
+)
+
 // ---------------------------------------------------------------------------
 
 type Context *string
@@ -38,6 +70,7 @@ type Node interface {
 	FreeVariables() Identifiers
 	SetFreeVariables(Identifiers)
 	SetContext(Context)
+	Type() ASTType
 }
 type Nodes []Node
 
@@ -125,6 +158,10 @@ type Apply struct {
 	TailStrict    bool
 }
 
+func (n *Apply) Type() ASTType {
+	return AST_APPLY
+}
+
 type NamedArgument struct {
 	Name Identifier
 	Arg  Node
@@ -144,6 +181,10 @@ type ApplyBrace struct {
 	Right Node
 }
 
+func (n *ApplyBrace) Type() ASTType {
+	return AST_APPLY_BRACE
+}
+
 // ---------------------------------------------------------------------------
 
 // Array represents array constructors [1, 2, 3].
@@ -151,6 +192,10 @@ type Array struct {
 	NodeBase
 	Elements      Nodes
 	TrailingComma bool
+}
+
+func (n *Array) Type() ASTType {
+	return AST_ARRAY
 }
 
 // ---------------------------------------------------------------------------
@@ -164,6 +209,10 @@ type ArrayComp struct {
 	Spec          ForSpec
 }
 
+func (n *ArrayComp) Type() ASTType {
+	return AST_ARRAY_COMPREHENSION
+}
+
 // ---------------------------------------------------------------------------
 
 // Assert represents an assert expression (not an object-level assert).
@@ -175,6 +224,10 @@ type Assert struct {
 	Cond    Node
 	Message Node
 	Rest    Node
+}
+
+func (n *Assert) Type() ASTType {
+	return AST_ASSERT
 }
 
 // ---------------------------------------------------------------------------
@@ -280,6 +333,10 @@ type Binary struct {
 	Right Node
 }
 
+func (n *Binary) Type() ASTType {
+	return AST_BINARY
+}
+
 // ---------------------------------------------------------------------------
 
 // Conditional represents if/then/else.
@@ -293,10 +350,18 @@ type Conditional struct {
 	BranchFalse Node
 }
 
+func (n *Conditional) Type() ASTType {
+	return AST_CONDITIONAL
+}
+
 // ---------------------------------------------------------------------------
 
 // Dollar represents the $ keyword
 type Dollar struct{ NodeBase }
+
+func (n *Dollar) Type() ASTType {
+	return AST_DOLLAR
+}
 
 // ---------------------------------------------------------------------------
 
@@ -304,6 +369,10 @@ type Dollar struct{ NodeBase }
 type Error struct {
 	NodeBase
 	Expr Node
+}
+
+func (n *Error) Type() ASTType {
+	return AST_ERROR
 }
 
 // ---------------------------------------------------------------------------
@@ -314,6 +383,10 @@ type Function struct {
 	Parameters    Parameters
 	TrailingComma bool
 	Body          Node
+}
+
+func (n *Function) Type() ASTType {
+	return AST_FUNCTION
 }
 
 type NamedParameter struct {
@@ -334,12 +407,20 @@ type Import struct {
 	File *LiteralString
 }
 
+func (n *Import) Type() ASTType {
+	return AST_IMPORT
+}
+
 // ---------------------------------------------------------------------------
 
 // ImportStr represents importstr "file".
 type ImportStr struct {
 	NodeBase
 	File *LiteralString
+}
+
+func (n *ImportStr) Type() ASTType {
+	return AST_IMPORTSTR
 }
 
 // ---------------------------------------------------------------------------
@@ -355,6 +436,11 @@ type Index struct {
 	Id     *Identifier
 }
 
+func (n *Index) Type() ASTType {
+	return AST_INDEX
+}
+
+// ---------------------------------------------------------------------------
 type Slice struct {
 	NodeBase
 	Target Node
@@ -363,6 +449,10 @@ type Slice struct {
 	BeginIndex Node
 	EndIndex   Node
 	Step       Node
+}
+
+func (n *Slice) Type() ASTType {
+	return AST_SLICE
 }
 
 // ---------------------------------------------------------------------------
@@ -382,6 +472,10 @@ type Local struct {
 	Body  Node
 }
 
+func (n *Local) Type() ASTType {
+	return AST_LOCAL
+}
+
 // ---------------------------------------------------------------------------
 
 // LiteralBoolean represents true and false
@@ -390,10 +484,18 @@ type LiteralBoolean struct {
 	Value bool
 }
 
+func (n *LiteralBoolean) Type() ASTType {
+	return AST_LITERAL_BOOLEAN
+}
+
 // ---------------------------------------------------------------------------
 
 // LiteralNull represents the null keyword
 type LiteralNull struct{ NodeBase }
+
+func (n *LiteralNull) Type() ASTType {
+	return AST_LITERAL_NULL
+}
 
 // ---------------------------------------------------------------------------
 
@@ -402,6 +504,10 @@ type LiteralNumber struct {
 	NodeBase
 	Value          float64
 	OriginalString string
+}
+
+func (n *LiteralNumber) Type() ASTType {
+	return AST_LITERAL_NUMBER
 }
 
 // ---------------------------------------------------------------------------
@@ -432,6 +538,10 @@ type LiteralString struct {
 	Value       string
 	Kind        LiteralStringKind
 	BlockIndent string
+}
+
+func (n *LiteralString) Type() ASTType {
+	return AST_LITERAL_STRING
 }
 
 // ---------------------------------------------------------------------------
@@ -484,6 +594,10 @@ type Object struct {
 	TrailingComma bool
 }
 
+func (n *Object) Type() ASTType {
+	return AST_OBJECT
+}
+
 // ---------------------------------------------------------------------------
 
 type DesugaredObjectField struct {
@@ -504,6 +618,10 @@ type DesugaredObject struct {
 	Fields  DesugaredObjectFields
 }
 
+func (n *DesugaredObject) Type() ASTType {
+	return AST_DESUGARED_OBJECT
+}
+
 // ---------------------------------------------------------------------------
 
 // ObjectComp represents object comprehension
@@ -515,10 +633,18 @@ type ObjectComp struct {
 	Spec          ForSpec
 }
 
+func (n *ObjectComp) Type() ASTType {
+	return AST_OBJECT_COMPREHENSION
+}
+
 // ---------------------------------------------------------------------------
 
 // Self represents the self keyword.
 type Self struct{ NodeBase }
+
+func (n *Self) Type() ASTType {
+	return AST_SELF
+}
 
 // ---------------------------------------------------------------------------
 
@@ -532,10 +658,20 @@ type SuperIndex struct {
 	Id    *Identifier
 }
 
+func (n *SuperIndex) Type() ASTType {
+	return AST_SUPER_INDEX
+}
+
+// ---------------------------------------------------------------------------
+
 // Represents the e in super construct.
 type InSuper struct {
 	NodeBase
 	Index Node
+}
+
+func (n *InSuper) Type() ASTType {
+	return AST_IN_SUPER
 }
 
 // ---------------------------------------------------------------------------
@@ -577,12 +713,20 @@ type Unary struct {
 	Expr Node
 }
 
+func (n *Unary) Type() ASTType {
+	return AST_UNARY
+}
+
 // ---------------------------------------------------------------------------
 
 // Var represents variables.
 type Var struct {
 	NodeBase
 	Id Identifier
+}
+
+func (n *Var) Type() ASTType {
+	return AST_VAR
 }
 
 // ---------------------------------------------------------------------------

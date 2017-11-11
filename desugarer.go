@@ -289,8 +289,9 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 		return
 	}
 
-	switch node := node.(type) {
-	case *ast.Apply:
+	switch node.Type() {
+	case ast.AST_APPLY:
+		node := node.(*ast.Apply)
 		desugar(&node.Target, objLevel)
 		for i := range node.Arguments.Positional {
 			err = desugar(&node.Arguments.Positional[i], objLevel)
@@ -305,7 +306,8 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			}
 		}
 
-	case *ast.ApplyBrace:
+	case ast.AST_APPLY_BRACE:
+		node := node.(*ast.ApplyBrace)
 		err = desugar(&node.Left, objLevel)
 		if err != nil {
 			return
@@ -321,7 +323,8 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			Right:    node.Right,
 		}
 
-	case *ast.Array:
+	case ast.AST_ARRAY:
+		node := node.(*ast.Array)
 		for i := range node.Elements {
 			err = desugar(&node.Elements[i], objLevel)
 			if err != nil {
@@ -329,7 +332,8 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			}
 		}
 
-	case *ast.ArrayComp:
+	case ast.AST_ARRAY_COMPREHENSION:
+		node := node.(*ast.ArrayComp)
 		comp, err := desugarArrayComp(node, objLevel)
 		if err != nil {
 			return err
@@ -340,7 +344,8 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			return err
 		}
 
-	case *ast.Assert:
+	case ast.AST_ASSERT:
+		node := node.(*ast.Assert)
 		if node.Message == nil {
 			node.Message = buildLiteralString("Assertion failed")
 		}
@@ -354,7 +359,8 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			return err
 		}
 
-	case *ast.Binary:
+	case ast.AST_BINARY:
+		node := node.(*ast.Binary)
 		// some operators get replaced by stdlib functions
 		if funcname, replaced := desugaredBop[node.Op]; replaced {
 			if funcname == "notEquals" {
@@ -382,7 +388,8 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			return
 		}
 
-	case *ast.Conditional:
+	case ast.AST_CONDITIONAL:
+		node := node.(*ast.Conditional)
 		err = desugar(&node.Cond, objLevel)
 		if err != nil {
 			return
@@ -399,19 +406,22 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			return
 		}
 
-	case *ast.Dollar:
+	case ast.AST_DOLLAR:
+		node := node.(*ast.Dollar)
 		if objLevel == 0 {
 			return parser.MakeStaticError("No top-level object found.", *node.Loc())
 		}
 		*astPtr = &ast.Var{NodeBase: node.NodeBase, Id: ast.Identifier("$")}
 
-	case *ast.Error:
+	case ast.AST_ERROR:
+		node := node.(*ast.Error)
 		err = desugar(&node.Expr, objLevel)
 		if err != nil {
 			return
 		}
 
-	case *ast.Function:
+	case ast.AST_FUNCTION:
+		node := node.(*ast.Function)
 		for i := range node.Parameters.Optional {
 			param := &node.Parameters.Optional[i]
 			err = desugar(&param.DefaultArg, objLevel)
@@ -424,21 +434,24 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			return
 		}
 
-	case *ast.Import:
+	case ast.AST_IMPORT:
+		node := node.(*ast.Import)
 		var file ast.Node = node.File
 		err = desugar(&file, objLevel)
 		if err != nil {
 			return
 		}
 
-	case *ast.ImportStr:
+	case ast.AST_IMPORTSTR:
+		node := node.(*ast.ImportStr)
 		var file ast.Node = node.File
 		err = desugar(&file, objLevel)
 		if err != nil {
 			return
 		}
 
-	case *ast.Index:
+	case ast.AST_INDEX:
+		node := node.(*ast.Index)
 		err = desugar(&node.Target, objLevel)
 		if err != nil {
 			return
@@ -455,7 +468,8 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			return
 		}
 
-	case *ast.Slice:
+	case ast.AST_SLICE:
+		node := node.(*ast.Slice)
 		if node.BeginIndex == nil {
 			node.BeginIndex = &ast.LiteralNull{}
 		}
@@ -471,7 +485,8 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			return
 		}
 
-	case *ast.Local:
+	case ast.AST_LOCAL:
+		node := node.(*ast.Local)
 		for i := range node.Binds {
 			if node.Binds[i].Fun != nil {
 				node.Binds[i] = ast.LocalBind{
@@ -490,16 +505,17 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			return
 		}
 
-	case *ast.LiteralBoolean:
+	case ast.AST_LITERAL_BOOLEAN:
 		// Nothing to do.
 
-	case *ast.LiteralNull:
+	case ast.AST_LITERAL_NULL:
 		// Nothing to do.
 
-	case *ast.LiteralNumber:
+	case ast.AST_LITERAL_NUMBER:
 		// Nothing to do.
 
-	case *ast.LiteralString:
+	case ast.AST_LITERAL_STRING:
+		node := node.(*ast.LiteralString)
 		if node.Kind.FullyEscaped() {
 			unescaped, err := stringUnescape(node.Loc(), node.Value)
 			if err != nil {
@@ -509,7 +525,9 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 		}
 		node.Kind = ast.StringDouble
 		node.BlockIndent = ""
-	case *ast.Object:
+
+	case ast.AST_OBJECT:
+		node := node.(*ast.Object)
 		// Hidden variable to allow $ binding.
 		if objLevel == 0 {
 			dollar := ast.Identifier("$")
@@ -527,7 +545,8 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			return
 		}
 
-	case *ast.DesugaredObject:
+	case ast.AST_DESUGARED_OBJECT:
+		node := node.(*ast.DesugaredObject)
 		for i := range node.Fields {
 			field := &((node.Fields)[i])
 			if field.Name != nil {
@@ -549,7 +568,8 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 			}
 		}
 
-	case *ast.ObjectComp:
+	case ast.AST_OBJECT_COMPREHENSION:
+		node := node.(*ast.ObjectComp)
 		comp, err := desugarObjectComp(node, objLevel)
 		if err != nil {
 			return err
@@ -560,27 +580,30 @@ func desugar(astPtr *ast.Node, objLevel int) (err error) {
 		}
 		*astPtr = comp
 
-	case *ast.Self:
+	case ast.AST_SELF:
 		// Nothing to do.
 
-	case *ast.SuperIndex:
+	case ast.AST_SUPER_INDEX:
+		node := node.(*ast.SuperIndex)
 		if node.Id != nil {
 			node.Index = &ast.LiteralString{Value: string(*node.Id)}
 			node.Id = nil
 		}
 
-	case *ast.InSuper:
+	case ast.AST_IN_SUPER:
+		node := node.(*ast.InSuper)
 		err := desugar(&node.Index, objLevel)
 		if err != nil {
 			return err
 		}
-	case *ast.Unary:
+	case ast.AST_UNARY:
+		node := node.(*ast.Unary)
 		err = desugar(&node.Expr, objLevel)
 		if err != nil {
 			return
 		}
 
-	case *ast.Var:
+	case ast.AST_VAR:
 		// Nothing to do.
 
 	default:
